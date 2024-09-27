@@ -1,0 +1,152 @@
+﻿@page "/"
+@using Blazored.LocalStorage
+@using System.Text.Json
+
+<PageTitle>Registro de Accidentes</PageTitle>
+
+<div class="container mt-5">
+    <h1 class="text-center">Registro de Accidentes de Tránsito</h1>
+    <p class="text-center">Utiliza esta aplicación para registrar, gestionar y visualizar accidentes de tránsito en la República Dominicana.</p>
+
+    <div class="text-center mb-4">
+        <FormRegistro />
+    </div>
+
+    @if (isEditing)
+    {
+        <div class="alert alert-info">
+            <h3>Editar Accidente</h3>
+            <form class="form-horizontal" @onsubmit="UpdateAccidente">
+                <!-- Campos de edición... -->
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancelar</button>
+            </form>
+        </div>
+    }
+
+    @if (accidentes.Count > 0)
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Descripción</th>
+                    <th>Costo Económico</th>
+                    <th>Muertos</th>
+                    <th>Heridos</th>
+                    <th>Vehículos Involucrados</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var accidente in accidentes)
+                {
+                    <tr>
+                        <td>@accidente.Fecha.ToShortDateString()</td>
+                        <td>@accidente.Descripcion</td>
+                        <td>@accidente.Costo.ToString("C")</td>
+                        <td>@accidente.NumeroMuertos</td>
+                        <td>@accidente.NumeroHeridos</td>
+                        <td>@accidente.CantidadVehiculos</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" @onclick="() => EditAccidente(accidente)">Editar</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => DeleteAccidente(accidente)">Eliminar</button>
+                            <button class="btn btn-info btn-sm" @onclick="() => GenerarReporte(accidente)">Reporte</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-info" role="alert">
+            No hay accidentes registrados.
+        </div>
+    }
+
+    @if (accidenteSeleccionado != null)
+    {
+        <div class="mt-5">
+            <h3>Reporte del Accidente</h3>
+            <p><strong>Fecha:</strong> @accidenteSeleccionado.Fecha.ToShortDateString()</p>
+            <p><strong>Descripción:</strong> @accidenteSeleccionado.Descripcion</p>
+            <p><strong>Costo Económico:</strong> @accidenteSeleccionado.Costo.ToString("C")</p>
+            <p><strong>Muertos:</strong> @accidenteSeleccionado.NumeroMuertos</p>
+            <p><strong>Heridos:</strong> @accidenteSeleccionado.NumeroHeridos</p>
+            <p><strong>Vehículos Involucrados:</strong> @accidenteSeleccionado.CantidadVehiculos</p>
+        </div>
+    }
+</div>
+
+@code {
+    [Inject]
+    private ILocalStorageService localStorage { get; set; }
+
+    private List<Accidente> accidentes = new List<Accidente>();
+    private Accidente editAccidente = new Accidente();
+    private Accidente accidenteSeleccionado = null; // Variable para el accidente del reporte
+    private bool isEditing = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var storedAccidentes = await localStorage.GetItemAsync<string>("accidentes");
+        if (!string.IsNullOrEmpty(storedAccidentes))
+        {
+            accidentes = JsonSerializer.Deserialize<List<Accidente>>(storedAccidentes);
+        }
+    }
+
+    private void EditAccidente(Accidente accidente)
+    {
+        editAccidente = new Accidente
+            {
+                Fecha = accidente.Fecha,
+                Descripcion = accidente.Descripcion,
+                Costo = accidente.Costo,
+                NumeroMuertos = accidente.NumeroMuertos,
+                NumeroHeridos = accidente.NumeroHeridos,
+                CantidadVehiculos = accidente.CantidadVehiculos
+            };
+        isEditing = true;
+    }
+
+    private async Task UpdateAccidente()
+    {
+        var index = accidentes.FindIndex(a => a.Fecha == editAccidente.Fecha && a.Descripcion == editAccidente.Descripcion);
+        if (index >= 0)
+        {
+            accidentes[index] = editAccidente;
+            await localStorage.SetItemAsync("accidentes", JsonSerializer.Serialize(accidentes));
+        }
+        isEditing = false;
+        StateHasChanged(); // Actualiza la vista
+    }
+
+    private void CancelEdit()
+    {
+        isEditing = false;
+    }
+
+    private async Task DeleteAccidente(Accidente accidente)
+    {
+        accidentes.Remove(accidente);
+        await localStorage.SetItemAsync("accidentes", JsonSerializer.Serialize(accidentes));
+        StateHasChanged(); // Actualiza la vista
+    }
+
+    private void GenerarReporte(Accidente accidente)
+    {
+        accidenteSeleccionado = accidente; // Asigna el accidente al reporte
+    }
+
+    public class Accidente
+    {
+        public DateTime Fecha { get; set; }
+        public string Descripcion { get; set; }
+        public double Costo { get; set; }
+        public int NumeroMuertos { get; set; }
+        public int NumeroHeridos { get; set; }
+        public int CantidadVehiculos { get; set; }
+    }
+}

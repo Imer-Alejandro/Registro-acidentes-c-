@@ -1,0 +1,82 @@
+﻿@using Blazored.LocalStorage
+@using System.Text.Json
+@inject ILocalStorageService localStorage
+
+<PageTitle>Registrar Accidente</PageTitle>
+
+<div class="container mt-5">
+    <h2>Registrar Accidente</h2>
+    <form class="form-horizontal" @onsubmit="HandleSubmit">
+        <div class="form-group row">
+            <label for="fecha" class="col-sm-2 col-form-label">Fecha</label>
+            <div class="col-sm-10">
+                <input type="date" class="form-control" id="fecha" @bind="nuevoAccidente.Fecha" required />
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="descripcion" class="col-sm-2 col-form-label">Descripción</label>
+            <div class="col-sm-10">
+                <textarea class="form-control" id="descripcion" @bind="nuevoAccidente.Descripcion" required></textarea>
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="costo" class="col-sm-2 col-form-label">Costo Económico</label>
+            <div class="col-sm-10">
+                <input type="number" class="form-control" id="costo" @bind="nuevoAccidente.Costo" required />
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="muertos" class="col-sm-2 col-form-label">Muertos</label>
+            <div class="col-sm-10">
+                <input type="number" class="form-control" id="muertos" @bind="nuevoAccidente.NumeroMuertos" required />
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="heridos" class="col-sm-2 col-form-label">Heridos</label>
+            <div class="col-sm-10">
+                <input type="number" class="form-control" id="heridos" @bind="nuevoAccidente.NumeroHeridos" required />
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="vehiculos" class="col-sm-2 col-form-label">Vehículos Involucrados</label>
+            <div class="col-sm-10">
+                <input type="number" class="form-control" id="vehiculos" @bind="nuevoAccidente.CantidadVehiculos" required />
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="col-sm-10 offset-sm-2">
+                <button type="submit" class="btn btn-primary">Registrar Accidente</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@code {
+    private Accidente nuevoAccidente = new Accidente();
+
+    private async Task HandleSubmit()
+    {
+        // Obtener los accidentes existentes desde el LocalStorage
+        var storedAccidentes = await localStorage.GetItemAsync<string>("accidentes");
+        List<Accidente> accidentes = string.IsNullOrEmpty(storedAccidentes)
+            ? new List<Accidente>()
+            : JsonSerializer.Deserialize<List<Accidente>>(storedAccidentes);
+
+        // Agregar el nuevo accidente
+        accidentes.Add(nuevoAccidente);
+
+        // Guardar la lista actualizada en el LocalStorage
+        await localStorage.SetItemAsync("accidentes", JsonSerializer.Serialize(accidentes));
+        StateHasChanged(); // Actualiza la vista
+    }
+
+    public class Accidente
+    {
+        public DateTime Fecha { get; set; }
+        public string Descripcion { get; set; }
+        public double Costo { get; set; }
+        public int NumeroMuertos { get; set; }
+        public int NumeroHeridos { get; set; }
+        public int CantidadVehiculos { get; set; }
+    }
+}
